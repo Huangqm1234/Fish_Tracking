@@ -19,12 +19,35 @@ def get_color(seed):
     bbox_color = [int(255 * c) for c in bbox_color][::-1]
     return bbox_color
 
+def save_trace(circle_coord_list: list, output_file: str, ID_num: int):
+    '''
+    保存追踪结果
+
+    参数:
+        circle_coord_list (list): 包含追踪坐标的列表字典，其中ID键的trace键为追踪坐标列表
+        output_file (str): 输出文件的路径
+        ID_num (int): 追踪目标的数量
+
+    返回:
+        None
+    '''
+    with open(output_file, 'w') as f:
+        for ID in range(ID_num):
+            f.write('**     ID = {}     **\n'.format(ID))
+            for each in circle_coord_list[ID]['trace']:
+                f.write('{},{}\n'.format(each[0], each[1]))
+            f.write('-'*10)
 
 
 def main():
+
+    # 文件名称
+    file_name = '1_tran'
+
     # 输入输出视频路径
-    input_video = 'data\\test_30s.mp4'
-    output = 'outputs\\output_test_30s.mp4'
+    input_video = 'data\\' + file_name + '.mp4'
+    output = 'outputs\\output_' + file_name + '.mp4'
+    trace_ouput = 'outputs\\trace_' + file_name + '.txt'
 
     # 指定单目标追踪算法 config 配置文件
     sot_config = 'siamese_rpn_r50_20e_lasot.py'
@@ -34,7 +57,7 @@ def main():
     sot_model = init_model(sot_config, sot_checkpoint, device='cuda:0')
 
     # 指定多个目标的初始矩形框坐标 [x, y, w, h]
-    init_bbox_xywh = [[1501, 324, 20, 25], [1452, 351, 22, 23]]
+    init_bbox_xywh = [[280, 572, 9, 11], [501, 499, 8, 11],[316, 565, 11, 11]]
 
     # 目标个数
     ID_num=len(init_bbox_xywh)
@@ -60,8 +83,8 @@ def main():
         print('\n')
         print('追踪第{}个目标'.format(ID+1))
         circle_coord_list[ID] = {}
-        circle_coord_list[ID]['bbox'] = []
-        circle_coord_list[ID]['trace'] = []
+        circle_coord_list[ID]['bbox'] = [] # 保存框的坐标
+        circle_coord_list[ID]['trace'] = [] # 保存跟踪中心点的坐标
 
         # 启动进度条
         prog_bar = mmcv.ProgressBar(len(imgs))
@@ -114,6 +137,9 @@ def main():
     mmcv.frames2video(out_path, output, fps=imgs.fps, fourcc='mp4v')
     print('已成功导出视频 至 {}'.format(output))
     out_dir.cleanup()
+
+    # 保存追踪结果
+    save_trace(circle_coord_list, trace_ouput, ID_num)
 
 
 if __name__ == '__main__':
