@@ -37,6 +37,7 @@ def save_trace(circle_coord_list: list, output_file: str, ID_num: int):
             for each in circle_coord_list[ID]['trace']:
                 f.write('{},{}\n'.format(each[0], each[1]))
             f.write('-'*10)
+            f.write('\n')
 
 
 def main():
