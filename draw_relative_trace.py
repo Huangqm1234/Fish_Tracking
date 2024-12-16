@@ -2,6 +2,8 @@ import matplotlib.pyplot as plt
 import math
 import numpy as np
 from scipy.signal import savgol_filter
+import os
+import pickle
 
 def read_trace_file(file_path):
     trace_data = {}
@@ -26,11 +28,6 @@ def read_trace_file(file_path):
                     x, y = map(float, line.split(','))
                     current_trace.append([x, y])
     return trace_data
-
-# 使用示例
-file_path = 'outputs\\trace_1_tran.txt'
-trace_data = read_trace_file(file_path)
-#print(trace_data[1][950])
 
 def distance(x1, y1, x2, y2):
     return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
@@ -107,24 +104,75 @@ def draw_relative_trace(trace_data):
     smooth_relative_location = smooth_trace(relative_location)
     return smooth_relative_location, relative_location
 
-smooth_relative_location,relative_location = draw_relative_trace(trace_data)
+
+def main(num: int):
+    '''
+    输入：
+        num: 输出的追踪路径的编号
+    输出：
+        smooth_relative_location: 平滑后的相对坐标
+    '''
+
+    file_path = 'outputs\\trace_{}_tran.txt'.format(num)
+
+    # 检查文件是否存在，如果不存在就直接返回，开始下一个的处理
+    if not os.path.exists(file_path):
+        print(f"File {file_path} does not exist.")
+        return None
+
+    trace_data = read_trace_file(file_path)
+
+    smooth_relative_location,relative_location = draw_relative_trace(trace_data)
+
+    visualization = False
+    if visualization == True:
+        plt.plot(relative_location[0][0], relative_location[0][1], 'ro')  # 绘制红色起点
+
+        # 绘制relative_location中的点
+        #for i in range(len(relative_location) - 1):
+        #    plt.plot([relative_location[i][0], relative_location[i + 1][0]], [relative_location[i][1], relative_location[i + 1][1]], 'b-')  # 绘制蓝色实线
+
+        # 绘制smooth_relative_location中的点
+        for i in range(len(smooth_relative_location) - 1):
+            plt.plot([smooth_relative_location[i][0], smooth_relative_location[i + 1][0]], [smooth_relative_location[i][1], smooth_relative_location[i + 1][1]], 'r-')  # 绘制红色实线
+
+        plt.xlabel('X')
+        plt.ylabel('Y')
+        plt.title('Relative Location of Points')
+        plt.grid(True)
+        plt.show()
+    
+    return smooth_relative_location
+
+def save_dict_to_file(my_dict, file_path):
+    with open(file_path, 'wb') as file:
+        pickle.dump(my_dict, file)
+
+def read_pkl_file(file_path):
+    with open(file_path, 'rb') as file:
+        data = pickle.load(file)
+    return data
+
+if __name__ == '__main__':
+
+    #total_num = 26 # 总项目数
+#
+    #final_result = {} # 最终的结果
+#
+    #for i in range(26):
+    #    result = main(i)
+    #    if result is not None:
+    #        final_result[i] = result
+#
+    #save_dict_to_file(final_result, 'outputs\\total_relative_trace.pkl')
+
+    # 读取 pkl 文件
+    pkl_file_path = 'outputs\\total_relative_trace.pkl'
+    pkl_data = read_pkl_file(pkl_file_path)
+    print(len(pkl_data[0]))
 
 
-plt.plot(relative_location[0][0], relative_location[0][1], 'ro')  # 绘制红色起点
 
-# 绘制relative_location中的点
-#for i in range(len(relative_location) - 1):
-#    plt.plot([relative_location[i][0], relative_location[i + 1][0]], [relative_location[i][1], relative_location[i + 1][1]], 'b-')  # 绘制蓝色实线
-
-# 绘制smooth_relative_location中的点
-for i in range(len(smooth_relative_location) - 1):
-    plt.plot([smooth_relative_location[i][0], smooth_relative_location[i + 1][0]], [smooth_relative_location[i][1], smooth_relative_location[i + 1][1]], 'r-')  # 绘制红色实线
-
-plt.xlabel('X')
-plt.ylabel('Y')
-plt.title('Relative Location of Points')
-plt.grid(True)
-plt.show()
 
 
 

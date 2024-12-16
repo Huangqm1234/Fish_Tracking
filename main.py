@@ -6,6 +6,7 @@ from mmtrack.apis import inference_sot, init_model
 
 import seaborn as sns
 import random
+import os
 # 生成调色板
 palette = sns.color_palette('hls', 20)
 
@@ -40,15 +41,24 @@ def save_trace(circle_coord_list: list, output_file: str, ID_num: int):
             f.write('\n')
 
 
-def main():
+def main(num:int):
+    '''
+    num就是实验数据的编号
+    '''
 
     # 文件名称
-    file_name = '1_tran'
+    file_name = str(num) + '_tran'
 
     # 输入输出视频路径
     input_video = 'data\\' + file_name + '.mp4'
     output = 'outputs\\output_' + file_name + '.mp4'
     trace_ouput = 'outputs\\trace_' + file_name + '.txt'
+    bbox_file = 'bbox\\' + str(num) + '.txt'
+
+    # 检查文件是否存在，如果不存在就直接返回，开始下一个的处理
+    if not os.path.exists(input_video):
+        print(f"File {input_video} does not exist.")
+        return
 
     # 指定单目标追踪算法 config 配置文件
     sot_config = 'siamese_rpn_r50_20e_lasot.py'
@@ -58,7 +68,16 @@ def main():
     sot_model = init_model(sot_config, sot_checkpoint, device='cuda:0')
 
     # 指定多个目标的初始矩形框坐标 [x, y, w, h]
-    init_bbox_xywh = [[280, 572, 9, 11], [501, 499, 8, 11],[316, 565, 11, 11]]
+    init_bbox_xywh = []
+    with open(bbox_file,'r') as f:
+        lines = f.readlines()
+        for line in lines:
+            line = line.strip()
+            numbers = line.split(',')
+            for i,num in enumerate(numbers):
+                numbers[i] = int(num)
+            init_bbox_xywh.append(numbers)
+    #init_bbox_xywh = [[280, 572, 9, 11], [501, 499, 8, 11],[316, 565, 11, 11]] # 箱鲀后点、锦鲤点、箱鲀前点
 
     # 目标个数
     ID_num=len(init_bbox_xywh)
@@ -110,38 +129,43 @@ def main():
 
     ## 可视化
     # 启动进度条
-    prog_bar = mmcv.ProgressBar(len(imgs))
-    
-    for i, img in enumerate(imgs): # 遍历视频每一帧
-        img_draw = img.copy()
-        
-        for ID in range(ID_num): # 遍历每个待追踪目标
-            # 获取该目标的专属颜色
-            ID_color = get_color(ID)
-            
-            result_bbox = circle_coord_list[ID]['bbox'][i]
-            
-            # 绘制目标检测矩形框：图像，左上角坐标，右下角坐标，颜色，线宽
-            img_draw = cv2.rectangle(img_draw, (result_bbox[0], result_bbox[1]), (result_bbox[2], result_bbox[3]), ID_color, 2)  
-    
-            # 绘制从第一帧到当前帧的轨迹
-            for each in circle_coord_list[ID]['trace'][:i]:
-                # 绘制圆，指定圆心坐标和半径，红色，最后一个参数为线宽，-1表示填充
-                img_draw = cv2.circle(img_draw, (each[0],each[1]), 2,  ID_color, -1)
-        
-        # 将当前帧的可视化效果保存为图片文件
-        cv2.imwrite(f'{out_path}/{i:06d}.jpg', img_draw)
-        prog_bar.update()
-        
-    # 将保存下来的各帧图片文件串成视频
-    print('导出视频，FPS {}'.format(imgs.fps))
-    mmcv.frames2video(out_path, output, fps=imgs.fps, fourcc='mp4v')
-    print('已成功导出视频 至 {}'.format(output))
-    out_dir.cleanup()
+    visualization = False
+    if visualization == True:
+        print('开始逐帧可视化')
+        prog_bar = mmcv.ProgressBar(len(imgs))
+
+        for i, img in enumerate(imgs): # 遍历视频每一帧
+            img_draw = img.copy()
+
+            for ID in range(ID_num): # 遍历每个待追踪目标
+                # 获取该目标的专属颜色
+                ID_color = get_color(ID)
+
+                result_bbox = circle_coord_list[ID]['bbox'][i]
+
+                # 绘制目标检测矩形框：图像，左上角坐标，右下角坐标，颜色，线宽
+                img_draw = cv2.rectangle(img_draw, (result_bbox[0], result_bbox[1]), (result_bbox[2], result_bbox[3]), ID_color, 2)  
+
+                # 绘制从第一帧到当前帧的轨迹
+                for each in circle_coord_list[ID]['trace'][:i]:
+                    # 绘制圆，指定圆心坐标和半径，红色，最后一个参数为线宽，-1表示填充
+                    img_draw = cv2.circle(img_draw, (each[0],each[1]), 2,  ID_color, -1)
+
+            # 将当前帧的可视化效果保存为图片文件
+            cv2.imwrite(f'{out_path}/{i:06d}.jpg', img_draw)
+            prog_bar.update()
+
+        # 将保存下来的各帧图片文件串成视频
+        print('导出视频，FPS {}'.format(imgs.fps))
+        mmcv.frames2video(out_path, output, fps=imgs.fps, fourcc='mp4v')
+        print('已成功导出视频 至 {}'.format(output))
+        out_dir.cleanup()
 
     # 保存追踪结果
     save_trace(circle_coord_list, trace_ouput, ID_num)
 
 
 if __name__ == '__main__':
-    main()
+    for i in range(26):
+        print('开始处理{}号视频'.format(i))
+        main(i)
